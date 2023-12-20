@@ -24,7 +24,7 @@ spring:
               client-id: 754317980356-5kha3jmphg9tm7oirmn7pac4fbauj85o.apps.googleusercontent.com
               client-secret: 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
               authorization-grant-type: authorization_code
-              redirect-uri: "http://127.0.0.1:8080/login/oauth2/code/google"
+              redirect-uri: "https://eafinalproject.azurewebsites.net/login/oauth2/code/google"
               scope:
                 - openid
                 - profile
