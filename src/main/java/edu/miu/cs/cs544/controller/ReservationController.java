@@ -48,7 +48,7 @@ public class ReservationController {
     public ResponseEntity<?> updateProduct(@PathVariable int id, @Valid @RequestBody ReservationDTO reservationDTO) throws CustomError {
         return new ResponseEntity<>(reservationService.updateReservation(id, reservationDTO), HttpStatus.OK);
     }
-  @GetMapping("/{productType}")
+  @GetMapping("/type/{productType}")
     public ResponseEntity<List<ReservationDTO>> getAllReservationsByProductType(@PathVariable String productType) {
         try {
             List<ReservationDTO> reservationDTOList = reservationService.getAllReservationByProductType(ProductType.valueOf(productType));
@@ -58,7 +58,7 @@ public class ReservationController {
         }
     }
 
-    @GetMapping("/{reservationType}")
+    @GetMapping("/type/{reservationType}")
     public ResponseEntity<List<ReservationDTO>> getAllReservationsByReservationType(@PathVariable String reservationType) {
         try {
             List<ReservationDTO> reservationDTOList = reservationService.getAllReservationByReservationType(ReservationType.valueOf(reservationType));

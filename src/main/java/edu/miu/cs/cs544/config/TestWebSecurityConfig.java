@@ -33,10 +33,6 @@ public class TestWebSecurityConfig {
     }
 
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(11);
-    }
     private static final String[] WHITE_LIST_URLS = {
             "/api/register-or-login",
             "/register*",
