@@ -114,9 +114,7 @@ class ReservationServiceImplementationTest {
         }
     }
 
-    @Test
-    void updateReservation() {
-    }
+
 
     @Test
     void deleteReservation() throws CustomError {
@@ -133,16 +131,6 @@ class ReservationServiceImplementationTest {
         when(reservationRepository.findById(reservation.getId())).thenReturn(optionalReservation);
         reservationService.deleteReservation(1);
         Mockito.verify(reservationRepository, times(1)).delete(optionalReservation.get());
-
-    }
-
-    @Test
-    void getAllReservationByProductType() {
-
-    }
-
-    @Test
-    void getAllReservationByReservationType() {
 
     }
 

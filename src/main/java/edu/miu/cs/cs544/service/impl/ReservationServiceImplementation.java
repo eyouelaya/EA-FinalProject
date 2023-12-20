@@ -6,6 +6,7 @@ import edu.miu.cs.cs544.domain.dto.ReservationDTO;
 import edu.miu.cs.cs544.repository.CustomerRepository;
 import edu.miu.cs.cs544.repository.ProductRepository;
 import edu.miu.cs.cs544.repository.ReservationRepository;
+import edu.miu.cs.cs544.repository.UserRepository;
 import edu.miu.cs.cs544.service.ReservationService;
 import jakarta.transaction.Transactional;
 import lombok.NoArgsConstructor;
@@ -17,6 +18,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,13 +37,15 @@ public class ReservationServiceImplementation implements ReservationService {
     @Autowired
     private final ProductRepository productRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     public ReservationServiceImplementation(CustomerRepository customerRepository,
                                             ReservationRepository reservationRepository,
                                             ProductRepository productRepository) {
         this.customerRepository = customerRepository;
         this.reservationRepository = reservationRepository;
         this.productRepository = productRepository;
-
     }
 
 
@@ -69,7 +73,7 @@ public class ReservationServiceImplementation implements ReservationService {
                 availableItem.get().setIsAvailable(false);
                 productRepository.save(availableItem.get());
             }
-
+            item.setAuditData(getAuditData(email));
         }
 
         return ReservationAdapter.getReservationDTO(reservationRepository.save(reservation));
@@ -77,18 +81,61 @@ public class ReservationServiceImplementation implements ReservationService {
 
     @Override
     public ReservationDTO getReservation(int id) throws CustomError {
-        Optional<Reservation> reservation = reservationRepository.findById(id);
+
+        String email = getEmailFromAuthentication();
+        if (email==null)
+            throw new CustomError("Email does not exist");
+
+        System.out.println("User Email: "+email);
+
+        User user = userRepository.findByEmail(email);
+        if (user==null)
+            throw new CustomError("User does not exist");
+
+        RoleType roleType = user.getRoleType();
+        Optional<Reservation> reservation;
+
+        if (roleType == RoleType.ADMIN)
+        {
+        reservation = reservationRepository.findById(id);
+
+        }else{
+            Customer customer = customerRepository.findCustomerByUser(user);
+
+            if (customer == null)
+                throw new CustomError("Customer not found");
+
+            reservation = reservationRepository.findReservationByIdAndCustomer(id,customer);
+        }
+
+
         if (reservation.isPresent())
             return ReservationAdapter.getReservationDTO(reservation.get());
 
-        throw new CustomError("Reservation with ID: " + id + " not found");
+        throw new CustomError("Reservation with ID: " + id + " not found",HttpStatus.NOT_FOUND);
 
     }
 
     @Override
     @Transactional
     public List<ReservationDTO> getAllReservation() throws CustomError {
-        List<ReservationDTO> reservationDTOList = reservationRepository
+        String email = getEmailFromAuthentication();
+        if (email==null)
+            throw new CustomError("Email does not exist");
+
+        System.out.println("User Email: "+email);
+
+        User user = userRepository.findByEmail(email);
+        if (user==null)
+            throw new CustomError("User does not exist");
+
+        RoleType roleType = user.getRoleType();
+
+        List<ReservationDTO> reservationDTOList = new ArrayList<>();
+
+        if (roleType == RoleType.ADMIN){
+
+       reservationDTOList = reservationRepository
                 .findAll()
                 .stream()
                 .map(ReservationAdapter::getReservationDTO)
@@ -96,6 +143,27 @@ public class ReservationServiceImplementation implements ReservationService {
                         Collectors
                                 .toList()
                 );
+
+        }else{
+
+            Customer customer = customerRepository.findCustomerByUser(user);
+
+            if (customer == null)
+                throw new CustomError("Customer not found");
+
+
+            reservationDTOList = reservationRepository.findReservationsByCustomer(customer)
+                    .stream()
+                    .map(ReservationAdapter::getReservationDTO)
+                    .collect(
+                            Collectors
+                                    .toList()
+                    );
+        }
+
+        if (reservationDTOList.size() <= 0)
+            throw new CustomError("No reservations found",HttpStatus.NOT_FOUND);
+
         return reservationDTOList;
     }
 
@@ -111,6 +179,7 @@ public class ReservationServiceImplementation implements ReservationService {
             // Update product availability
             List<Item> updatedItemList = updatedReservation.getItems();
             List<Item> existingItemList = existingReservation.get().getItems();
+            AuditData auditData = new AuditData();
 
             for (Item updatedItem : updatedItemList) {
                 Optional<Product> existingProduct = productRepository.findById(updatedItem.getProduct().getId());
@@ -125,16 +194,28 @@ public class ReservationServiceImplementation implements ReservationService {
                     // Update availability for the new product
                     Optional<Product> updatedProduct = productRepository.findById(updatedItem.getProduct().getId());
                     if (updatedProduct.isPresent()) {
-                        if (!updatedProduct.get().getIsAvailable()) {
-                            throw new CustomError(updatedProduct.get().getName() + " is not available");
+                        for(Item existingItem: existingItemList){
+                            if(updatedItem.getId() != existingItem.getId()){
+                                if (!updatedProduct.get().getIsAvailable()) {
+                                    throw new CustomError(updatedProduct.get().getName() + " is not available");
+                                }
+                            }
                         }
+
+
                         updatedProduct.get().setIsAvailable(false);
                         productRepository.save(updatedProduct.get());
                     }
                 }
+                auditData.setUpdatedBy(getEmailFromAuthentication());
+                auditData.setUpdatedOn(LocalDateTime.now());
+                auditData.setCreatedOn(existingReservation.get().getAuditData().getCreatedOn());
+                auditData.setCreatedBy(existingReservation.get().getAuditData().getCreatedBy());
+                updatedItem.setAuditData(auditData);
             }
 
             // Save the updated reservation
+            updatedReservation.setAuditData(auditData);
             Reservation savedReservation = reservationRepository.save(updatedReservation);
             return ReservationAdapter.getReservationDTO(savedReservation);
         } else {
