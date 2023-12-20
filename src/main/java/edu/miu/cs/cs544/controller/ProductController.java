@@ -7,7 +7,12 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -16,7 +21,7 @@ public class ProductController {
     private ProductService productService;
 
     @PostMapping("/products")
-    public ResponseEntity<?> addProduct(@Valid @RequestBody ProductDTO productDTO) {
+    public ResponseEntity<?> addProduct(@Valid @RequestBody ProductDTO productDTO) throws CustomError {
         return new ResponseEntity<>(productService.addProduct(productDTO), HttpStatus.CREATED);
     }
 
@@ -43,6 +48,16 @@ public class ProductController {
     @GetMapping("/products")
     public ResponseEntity<?> getAllProducts() {
         return new ResponseEntity<>(productService.getAllProducts(), HttpStatus.OK);
+    }
+
+    private String getEmailFromAuthentication(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if(authentication ==null) {
+            JwtAuthenticationToken jwtAuthenticationToken = (JwtAuthenticationToken) authentication;
+            Map<String, Object> attributes = jwtAuthenticationToken.getTokenAttributes();
+            return (String) attributes.get("email");
+        }
+        return null;
     }
 
 

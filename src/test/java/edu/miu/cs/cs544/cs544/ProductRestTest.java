@@ -5,7 +5,6 @@ import edu.miu.cs.cs544.domain.dto.ProductDTO;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
-import org.junit.Rule;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +14,7 @@ import static org.hamcrest.Matchers.equalTo;
 
 @ExtendWith(RetryExtension.class)
 class ProductRestTest {
+
     @BeforeAll
     public static void setUp() {
         RestAssured.port = 8080;

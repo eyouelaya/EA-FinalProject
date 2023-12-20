@@ -2,7 +2,6 @@ package edu.miu.cs.cs544.config;
 
 
 import edu.miu.cs.cs544.service.UserCheck;
-import edu.miu.cs.cs544.service.impl.CustomAuthenticationProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -10,25 +9,34 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtDecoders;
 import org.springframework.security.web.SecurityFilterChain;
+
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties(OAuth2ClientProperties.class)
-@Profile("prod")
-public class WebSecurityConfig {
-
-    @Autowired
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+@Profile("test")
+public class TestWebSecurityConfig {
     private UserCheck userService;
 
     @Autowired
-    private CustomAuthenticationProvider customAuthenticationProvider;
+    public void setUserService(UserCheck userService) {
+        this.userService = userService;
+    }
 
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(11);
+    }
     private static final String[] WHITE_LIST_URLS = {
             "/api/register-or-login",
             "/register*",
@@ -42,23 +50,28 @@ public class WebSecurityConfig {
             "/logout*", "/error*","/oauth2/**","/login/**"
     };
 
+
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(sessionManagement ->
+                        sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeRequests(authorizeRequests ->
                         authorizeRequests
                                 .requestMatchers(WHITE_LIST_URLS).permitAll()
-                                .requestMatchers("/api/**").authenticated()
+                                .requestMatchers("/api/**").permitAll()
                 )
-                .formLogin(formLogin ->
-                        formLogin
-                                .defaultSuccessUrl("/", true)
-                )
+
                 .oauth2Login(oauth2Login ->
                         oauth2Login
-                                .defaultSuccessUrl("/", true)
+                                .authorizationEndpoint(authorizationEndpoint ->
+                                        authorizationEndpoint
+                                                .baseUri("/auth2/authorization/api-client-oidc")
+                                )
                 )
+                .oauth2Login(Customizer.withDefaults())
                 .oauth2Client(Customizer.withDefaults())
                 .oauth2ResourceServer(oauth2ResourceServer ->
                         oauth2ResourceServer
@@ -68,8 +81,7 @@ public class WebSecurityConfig {
 
         return http.build();
     }
-   @Autowired
-   private PasswordEncoder passwordEncoder;
+
 
     @Bean
     public JwtDecoder jwtDecoder() {

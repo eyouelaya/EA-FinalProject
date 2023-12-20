@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
@@ -53,6 +54,18 @@ public class UserRegistrationController {
         }
         return new ResponseEntity<>("Successfully Registered, check your email to verify your account", HttpStatus.OK);
     }
+    @PostMapping("/api/register")
+    public ResponseEntity<?> registerAdmin(@RequestBody UserDTO userDTO, HttpServletRequest request, Authentication authentication){
+
+        try {
+            User user = userService.registerAdmin(userDTO,getEmailFromAuthentication(authentication));
+            eventPublisher.publishEvent(new RegistrationCompleteEvent(user, applicationUrl(request)));
+        }
+        catch (CustomError e){
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>("Successfully Registered, check your email to verify your account", HttpStatus.OK);
+    }
     @GetMapping("/registrationConfirm")
     public ResponseEntity<?> confirmRegistration(@RequestParam("token") String token) {
         String result = userService.validateVerificationToken(token);
@@ -81,17 +94,27 @@ public String resetPassword(@RequestBody PasswordDTO passwordDTO, HttpServletReq
         }
         return url;
     }
-    @GetMapping("/api/hello")
+    @GetMapping("/")
     public ResponseEntity<?> hello(Authentication authentication) throws CustomError{
-        Authentication authToken = SecurityContextHolder.getContext().getAuthentication();
-        Map<String, Object> attributes;
-        attributes = ((JwtAuthenticationToken) authToken).getTokenAttributes();
-        System.out.println(attributes.get("email"));
-        Customer user = customerRepository.findByEmail((String) attributes.get("email"));
-        if(user== null){
-            throw new CustomError("User not found",HttpStatus.NOT_FOUND);
+       return new ResponseEntity<>(getEmailFromAuthentication(authentication), HttpStatus.OK);
+    }
+    private String getEmailFromAuthentication(Authentication authentication) throws CustomError {
+        if (authentication instanceof JwtAuthenticationToken jwtAuthenticationToken) {
+            return (String) jwtAuthenticationToken.getTokenAttributes().get("email");
+        } else if (authentication instanceof UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken) {
+            return usernamePasswordAuthenticationToken.getName();
         }
-        return new ResponseEntity<>(user.getEmail(), HttpStatus.OK);
+        else if (authentication != null && authentication.getPrincipal() instanceof OAuth2AuthenticatedPrincipal oauth2User) {
+            String email = oauth2User.getAttribute("email");
+            Customer user = customerRepository.findByEmail(email);
+            if(user== null){
+                throw new CustomError("User not found", HttpStatus.BAD_REQUEST);
+            }
+            return user.getEmail();
+        }
+        else {
+            throw new IllegalArgumentException("Authentication method not supported");
+        }
     }
     private String passwordResetTokenMail(User user, String token, String appUrl) {
         String url = appUrl + "/savePassword?id=" + user.getId() + "&token=" + token;

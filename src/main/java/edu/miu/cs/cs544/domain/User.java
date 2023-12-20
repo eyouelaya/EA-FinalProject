@@ -19,7 +19,7 @@ public class User {
 
     private String userPass;
 
-    private Boolean active;
+    private Boolean active=false;
 
     @Embedded
     private AuditData auditData;

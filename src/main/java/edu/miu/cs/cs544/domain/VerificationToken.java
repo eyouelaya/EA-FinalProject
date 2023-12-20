@@ -17,12 +17,19 @@ public class VerificationToken {
     private Integer id;
     private String token;
     private Date expiryDate;
+    private String username;
+
+    public VerificationToken(String username,String token) {
+        this.token = token;
+        this.expiryDate = calculateExpirationDate(EXPIRATION);;
+        this.username = username;
+    }
 
     //Expiration in minutes
     private static final int EXPIRATION = 20;
 
     @OneToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id",nullable = false, foreignKey = @ForeignKey(name = "FK_USER_VERIFY_TOKEN"))
+    @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "FK_USER_VERIFY_TOKEN"))
     private User user;
 
     public VerificationToken(User user, String token) {

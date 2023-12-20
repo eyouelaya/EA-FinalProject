@@ -4,15 +4,18 @@ import edu.miu.cs.cs544.domain.*;
 import edu.miu.cs.cs544.domain.dto.AddressDTO;
 import edu.miu.cs.cs544.domain.dto.CustomerDTO;
 import edu.miu.cs.cs544.domain.dto.StateDTO;
+import edu.miu.cs.cs544.domain.dto.UserDTO;
 import edu.miu.cs.cs544.repository.CustomerRepository;
 import edu.miu.cs.cs544.repository.PasswordResetTokenRepository;
 import edu.miu.cs.cs544.repository.UserRepository;
 import edu.miu.cs.cs544.repository.VerificationTokenRepository;
 import edu.miu.cs.cs544.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Calendar;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,7 +28,6 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserRepository userRepository;
-
 
     private PasswordEncoder passwordEncoder;
 
@@ -42,38 +44,73 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User registerUser(CustomerDTO customerDTO) throws CustomError {
-        User existingUser = userRepository.findByEmail(customerDTO.getEmail());
-        if (existingUser != null) {
-            throw new CustomError("There is an account with that email address: " + customerDTO.getEmail());
-        }
+
+        if ( emailExists(customerDTO.getEmail()) ) {
+            throw new CustomError("There is an account with that email address: " + customerDTO.getEmail()+"If you forgot your password click on reset link");
+        }else {
         User user = new User();
         user.setUserName(customerDTO.getUserName());
+        user.setEmail(customerDTO.getEmail());
         user.setRoleType(RoleType.CLIENT);
         user.setUserPass(passwordEncoder.encode(customerDTO.getUserPass()));
         userRepository.save(user);
 
         Customer customer = getCustomer(customerDTO, user);
-
         // Save the Customer entity
         customerRepository.save(customer);
         return user;
-    }
+    }}
+    @Override
+    public User registerAdmin(UserDTO userDTO, String email) throws CustomError {
+
+        if (isAdminUser(email)) {
+            if (emailExists(userDTO.getEmail())) {
+                throw new CustomError("Please enter a valid email address", HttpStatus.BAD_REQUEST);
+            } else {
+                User user = new User();
+                user.setUserName(userDTO.getUserName());
+                user.setEmail(userDTO.getEmail());
+                user.setRoleType(RoleType.ADMIN);
+                user.setUserPass(passwordEncoder.encode(userDTO.getUserPass()));
+                userRepository.save(user);
+
+                return user;
+            }
+        }
+    else{
+            throw new CustomError("You are not authorized to perform this action", HttpStatus.UNAUTHORIZED);
+        }
+        }
 
     private Customer getCustomer(CustomerDTO customerDTO, User user) {
         Address physicalAddress = mapAddressDTOToEntity(customerDTO.getCustomerPhysicalAddressDTO());
         Address billingAddress = mapAddressDTOToEntity(customerDTO.getCustomerBillingAddressDTO());
+
+
 
         Customer customer = new Customer();
         customer.setFirstName(customerDTO.getFirstName());
         customer.setLastName(customerDTO.getLastName());
         customer.setEmail(customerDTO.getEmail());
 
+        //get audit data
+
+        AuditData auditData = new AuditData();
+        auditData.setCreatedBy(customerDTO.getUserName());
+        auditData.setUpdatedBy(customerDTO.getUserName());
+        auditData.setCreatedOn(LocalDateTime.now());
+        auditData.setUpdatedOn(LocalDateTime.now());
+
+        customer.setAuditData(auditData);
+
         // Set Address entities in Customer
         customer.setCustomerPhysicalAddress(physicalAddress);
         customer.setCustomerBillingAddress(billingAddress);
-        customer.setAuditData(new AuditData());
+        customer.setAuditData(auditData);
         customer.setUser(user);
 
+
+        System.out.println("Customer: " + customer);
 
         return customer;
     }
@@ -111,7 +148,12 @@ public class UserServiceImpl implements UserService {
     }
 
     private boolean emailExists(String email) {
-        return userRepository.findByEmail(email) != null;
+        return customerRepository.findByEmail(email) != null;
+    }
+
+    public boolean isAdminUser(String email) {
+        User user = userRepository.findByEmail(email);
+        return user != null && user.getRoleType() == RoleType.ADMIN;
     }
 
     @Override

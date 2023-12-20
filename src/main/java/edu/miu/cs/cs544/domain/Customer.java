@@ -38,9 +38,11 @@ public class Customer {
     @OneToOne(cascade = CascadeType.ALL)
     private User user;
 
+
      private String userPass;
 
      private  String userName;
+
 
     public Customer(Integer id, String firstName, String lastName, String email, AuditData auditData, Address address, Address address1, List<Reservation> reservationList, User user) {
 

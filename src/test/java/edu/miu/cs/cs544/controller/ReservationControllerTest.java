@@ -1,7 +1,7 @@
 package edu.miu.cs.cs544.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.miu.cs.cs544.domain.CustomError;
+import edu.miu.cs.cs544.cs544.RetryExtension;
 import edu.miu.cs.cs544.domain.ProductType;
 import edu.miu.cs.cs544.domain.ReservationType;
 import edu.miu.cs.cs544.domain.adapter.ReservationAdapter;
@@ -11,13 +11,14 @@ import edu.miu.cs.cs544.domain.dto.ProductDTO;
 import edu.miu.cs.cs544.domain.dto.ReservationDTO;
 import edu.miu.cs.cs544.service.ReservationService;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
@@ -28,11 +29,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ExtendWith(RetryExtension.class)
 class ReservationControllerTest {
 
     @MockBean
@@ -54,7 +58,6 @@ class ReservationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated());
         Mockito.verify(reservationService, Mockito.times(1)).createReservation(reservationDTO);
-
     }
 
     @Test
@@ -82,9 +85,6 @@ class ReservationControllerTest {
     ReservationDTO reservationDTO2 = createDummyReservationDTO(2);
 
     ReservationAdapter.getReservation(reservationDTO2).setId(2);
-
-    Integer reservationId = ReservationAdapter.getReservation(reservationDTO).getId();
-    Integer reservationId2 = ReservationAdapter.getReservation(reservationDTO2).getId();
 
     List<ReservationDTO> reservationDTOList = List.of(reservationDTO,reservationDTO2);
 

@@ -5,6 +5,7 @@ import edu.miu.cs.cs544.domain.CustomError;
 import edu.miu.cs.cs544.domain.ProductType;
 import edu.miu.cs.cs544.domain.ReservationType;
 import edu.miu.cs.cs544.domain.dto.ReservationDTO;
+import jakarta.transaction.Transactional;
 
 import java.util.List;
 
