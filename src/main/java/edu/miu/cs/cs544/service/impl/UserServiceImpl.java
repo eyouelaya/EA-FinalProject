@@ -54,6 +54,13 @@ public class UserServiceImpl implements UserService {
         user.setRoleType(RoleType.CLIENT);
         user.setUserPass(passwordEncoder.encode(customerDTO.getUserPass()));
         userRepository.save(user);
+        AuditData auditData = new AuditData();
+        auditData.setCreatedBy(customerDTO.getUserName());
+        auditData.setUpdatedBy(customerDTO.getUserName());
+        auditData.setCreatedOn(LocalDateTime.now());
+        auditData.setUpdatedOn(LocalDateTime.now());
+
+        user.setAuditData(auditData);
 
         Customer customer = getCustomer(customerDTO, user);
         // Save the Customer entity
@@ -72,6 +79,13 @@ public class UserServiceImpl implements UserService {
                 user.setEmail(userDTO.getEmail());
                 user.setRoleType(RoleType.ADMIN);
                 user.setUserPass(passwordEncoder.encode(userDTO.getUserPass()));
+                 AuditData auditData = new AuditData();
+                auditData.setCreatedBy(userDTO.getUserName());
+                auditData.setUpdatedBy(userDTO.getUserName());
+                auditData.setCreatedOn(LocalDateTime.now());
+                auditData.setUpdatedOn(LocalDateTime.now());
+
+                user.setAuditData(auditData);
                 userRepository.save(user);
 
                 return user;
