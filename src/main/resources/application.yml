@@ -38,3 +38,14 @@ spring:
               token-uri: https://www.googleapis.com/oauth2/v4/token
   profiles:
     active: prod
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "logfile"
+  endpoint:
+    shutdown:
+      enabled: true
+logging:
+  file:
+    name: mylog.log
