@@ -48,4 +48,4 @@ management:
       enabled: true
 logging:
   file:
-    name: mylog.log
+    name: /mylog.log
